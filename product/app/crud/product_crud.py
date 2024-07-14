@@ -9,26 +9,16 @@ def add_new_product(product_data: ProductCreate, session: Session) -> Product:
     try:
         # Convert Pydantic ProductCreate to SQLAlchemy Product
         db_product = Product(
-            name=product_data.name,
-            description=product_data.description,
-            brand=product_data.brand,
-            category=product_data.category
+            **product_data.model_dump(exclude={"options"})
         )
-        
         # Add options and images to the product
         for option_data in product_data.options:
             db_option = ProductOption(
-                product_id=option_data.product_id,
-                expiry=option_data.expiry,
-                weight=option_data.weight,
-                price=option_data.price,
-                colour=option_data.colour,
-                size=option_data.size
+                **option_data.model_dump(exclude={"images"})
             )
             for image_data in option_data.images:
                 db_image = ProductImage(
-                    product_option_id=image_data.product_option_id,
-                    url=image_data.url
+                    **image_data.model_dump()
                 )
                 db_option.images.append(db_image)
             db_product.options.append(db_option)
@@ -57,23 +47,13 @@ def get_product_by_id(product_id: int, session: Session) -> ProductRead:
 
     # Convert the retrieved Product to ProductRead
     product_read = ProductRead(
-        name=product.name,
-        description=product.description,
-        brand=product.brand,
-        category=product.category,
+        **product.model_dump(exclude={"options"}),
         options=[
             ProductOptionRead(
-                product_id=option.product_id,
-                expiry=option.expiry,
-                weight=option.weight,
-                price=option.price,
-                colour=option.colour,
-                size=option.size,
-            
+                **option.model_dump(exclude={"images"}),
                 images=[
                     ProductImageRead(
-                        product_option_id=image.product_option_id,
-                        url=image.url
+                        **image.model_dump()
                     ) for image in option.images
                 ]
             ) for option in product.options
