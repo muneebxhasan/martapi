@@ -1,5 +1,5 @@
 from sqlmodel import  Session, select
-from app.model.inventory_model import Inventory
+from app.model.inventory_model import Inventory 
 from fastapi import HTTPException
 
 def add_new_inventoryItem(inventory_data: Inventory, session:Session):

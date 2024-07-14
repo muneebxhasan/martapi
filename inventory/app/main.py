@@ -18,7 +18,7 @@ loop = asyncio.get_event_loop()
 @asynccontextmanager
 async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
     print("Creating tables..")
-    asyncio.create_task(consume_messages('todos', 'broker:19092'))    
+    asyncio.create_task(consume_messages('product_stock', 'broker:19092'))    
 
     create_db_and_tables()
     yield
