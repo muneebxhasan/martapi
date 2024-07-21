@@ -2,10 +2,11 @@ from fastapi import HTTPException
 from sqlmodel import Session, select
 from app.models.productModel import Product, ProductImageRead, ProductOptionRead, ProductRead, ProductUpdate, ProductRating ,ProductOption ,ProductImage ,ProductOptionCreate,ProductCreate
 from app.core.dp_kafka import Producer
+from app.producer.stock_producer import stock_producer
 import json
 # from app import stock_pb2
 
-def add_new_product(product_data: ProductCreate, session: Session) -> Product:
+async def add_new_product(product_data: ProductCreate, db: Session,producer:Producer) :
     try:
         # Convert Pydantic ProductCreate to SQLAlchemy Product
         db_product = Product(
@@ -16,6 +17,7 @@ def add_new_product(product_data: ProductCreate, session: Session) -> Product:
             db_option = ProductOption(
                 **option_data.model_dump(exclude={"images"})
             )
+
             for image_data in option_data.images:
                 db_image = ProductImage(
                     **image_data.model_dump()
@@ -24,21 +26,42 @@ def add_new_product(product_data: ProductCreate, session: Session) -> Product:
             db_product.options.append(db_option)
 
         print("Adding Product to Database")
-        session.add(db_product)
-        session.commit()
-        session.refresh(db_product)
+        db.add(db_product)
+        db.commit()
+        db.refresh(db_product)
+        for idx, option_data in enumerate(product_data.options):
+            stock = {
+                "product_id": db_product.options[idx].product_id,
+                "option_id": db_product.options[idx].id,
+                "quantity": option_data.stock,
+            }
+            await stock_producer(stock, producer)
         return db_product
     except Exception as e:
-        session.rollback()
+        db.rollback()
         raise HTTPException(status_code=500, detail="Failed to add product to database") from e
 
-def get_all_products(session: Session) -> list[Product]:
-    products = session.exec(select(Product)).all()
-    products = [product for product in products]
+def get_all_products(db: Session) -> list[ProductRead]:
+    products = db.exec(select(Product)).all()
+    
+    products = [ProductRead(
+        **product.model_dump(exclude={"options"}),
+        options=[
+            ProductOptionRead(
+                **option.model_dump(exclude={"images"}),
+                images=[
+                    ProductImageRead(
+                        **image.model_dump()
+                    ) for image in option.images
+                ]
+            ) for option in product.options
+        ]
+    ) for product in products]
+    print(products[0].options)
     return products
 
-def get_product_by_id(product_id: int, session: Session) -> ProductRead:
-    product = session.exec(
+def get_product_by_id(product_id: int, db: Session) -> ProductRead:
+    product = db.exec(
         select(Product).where(Product.id == product_id)
     ).one_or_none()
     
@@ -62,30 +85,30 @@ def get_product_by_id(product_id: int, session: Session) -> ProductRead:
     
     return product_read
 
-def update_product_by_id(product_id: int, to_update_product_data:ProductUpdate, session: Session):
+def update_product_by_id(product_id: int, to_update_product_data:ProductUpdate, db: Session):
     # Step 1: Get the Product by ID
-    product = session.exec(select(Product).where(Product.id == product_id)).one_or_none()
+    product = db.exec(select(Product).where(Product.id == product_id)).one_or_none()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     # Step 2: Update the Product
     hero_data = to_update_product_data.model_dump(exclude_unset=True)
     product.sqlmodel_update(hero_data)
-    session.add(product)
-    session.commit()
+    db.add(product)
+    db.commit()
     return product
 
-def delete_product_by_id(product_id: int, session: Session):
+def delete_product_by_id(product_id: int, db: Session):
     # Step 1: Get the Product by ID
-    product = session.exec(select(Product).where(Product.id == product_id)).one_or_none()
+    product = db.exec(select(Product).where(Product.id == product_id)).one_or_none()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     # Step 2: Delete the Product
-    session.delete(product)
-    session.commit()
+    db.delete(product)
+    db.commit()
     return {"message": "Product Deleted Successfully"}
 
-async def add_product_option(productv: ProductOptionCreate ,session:Session,producer:Producer):
-    product = session.exec(select(Product).where(Product.id == productv.product_id)).one_or_none()
+async def add_product_option(productv: ProductOptionCreate ,db:Session,producer:Producer):
+    product = db.exec(select(Product).where(Product.id == productv.product_id)).one_or_none()
     if not product:
             raise HTTPException(status_code=404, detail="Product not found!!!")
     
@@ -102,46 +125,46 @@ async def add_product_option(productv: ProductOptionCreate ,session:Session,prod
     # new_p = ProductOption(**new_p)
     new_p = ProductOption.model_validate(productv)
     product.options.append(new_p)
-    session.commit()
-    session.refresh(new_p)
+    db.commit()
+    db.refresh(new_p)
 
     return new_p
 
-def get_all_option(product_id:int,session:Session):
-    v = session.exec(select(ProductOption).where(ProductOption.product_id == product_id)).all()
+def get_all_option(product_id:int,db:Session):
+    v = db.exec(select(ProductOption).where(ProductOption.product_id == product_id)).all()
     return v
 
-def get_option_by_id(option_id:int,session:Session):
-    option = session.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
+def get_option_by_id(option_id:int,db:Session):
+    option = db.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
     return option
 
-def update_option_by_id(option_id: int, to_update_option_data:ProductOption, session: Session):
+def update_option_by_id(option_id: int, to_update_option_data:ProductOption, db: Session):
     # Step 1: Get the Option by ID
-    option = session.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
+    option = db.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
     # Step 2: Update the Option
     hero_data = to_update_option_data.model_dump(exclude_unset=True)
     option.sqlmodel_update(hero_data)
-    session.add(option)
-    session.commit()
+    db.add(option)
+    db.commit()
     return option
 
-def delete_option_by_id(option_id: int, session: Session):
+def delete_option_by_id(option_id: int, db: Session):
     # Step 1: Get the Option by ID
-    option = session.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
+    option = db.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
     # Step 2: Delete the Option
-    session.delete(option)
-    session.commit()
+    db.delete(option)
+    db.commit()
     return {"message": "Option Deleted Successfully"}
 
-def add_product_review( productrating:ProductRating, session: Session):
+def add_product_review( productrating:ProductRating, db: Session):
         # Step 1: Get the Product by ID
-        product = session.exec(select(Product).where(Product.id == productrating.product_id)).one_or_none()
+        product = db.exec(select(Product).where(Product.id == productrating.product_id)).one_or_none()
         if not product:
             raise HTTPException(status_code=404, detail="Product not found!!!")
         
@@ -152,50 +175,50 @@ def add_product_review( productrating:ProductRating, session: Session):
         product.ratings.append(new_review)
         print("debugging product")
         # Step 4: Commit the changes
-        session.commit()
-        session.refresh(new_review)
+        db.commit()
+        db.refresh(new_review)
         
         return new_review
 
-def get_all_review_of_product(product_id:int,session:Session)->list[ProductRating]:
-    reviews = session.exec(select(ProductRating).where(ProductRating.product_id == product_id)).all()
+def get_all_review_of_product(product_id:int,db:Session)->list[ProductRating]:
+    reviews = db.exec(select(ProductRating).where(ProductRating.product_id == product_id)).all()
     reviews = [review for review in reviews]
     return reviews
 
-def get_all_review_by_user(user_id:int,session:Session)->list[ProductRating]:
-    reviews = session.exec(select(ProductRating).where(ProductRating.user_id == user_id)).all()
+def get_all_review_by_user(user_id:int,db:Session)->list[ProductRating]:
+    reviews = db.exec(select(ProductRating).where(ProductRating.user_id == user_id)).all()
     reviews = [review for review in reviews]
     return reviews  
 
-def get_user_review(product_id:int,user_id:int,session:Session):
+def get_user_review(product_id:int,user_id:int,db:Session):
     
-    review = session.exec(select(ProductRating).where(ProductRating.product_id == product_id,ProductRating.user_id == user_id)).all()
+    review = db.exec(select(ProductRating).where(ProductRating.product_id == product_id,ProductRating.user_id == user_id)).all()
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
     return review   
 
-def delete_review_by_id(review_id: int, session: Session):
+def delete_review_by_id(review_id: int, db: Session):
     # Step 1: Get the Review by ID
-    review = session.exec(select(ProductRating).where(ProductRating.id == review_id)).one_or_none()
+    review = db.exec(select(ProductRating).where(ProductRating.id == review_id)).one_or_none()
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
     # Step 2: Delete the Review
-    session.delete(review)
-    session.commit()
+    db.delete(review)
+    db.commit()
     return {"message": "Review Deleted Successfully"}
 
-def delete_review_by_user(user_id:int,session:Session):
-    reviews = session.exec(select(ProductRating).where(ProductRating.user_id == user_id)).all()
+def delete_review_by_user(user_id:int,db:Session):
+    reviews = db.exec(select(ProductRating).where(ProductRating.user_id == user_id)).all()
     if not reviews:
         raise HTTPException(status_code=404, detail="User has no reviews")
     for review in reviews:
-        session.delete(review)
-    session.commit()
+        db.delete(review)
+    db.commit()
     return {"message": "All Reviews Deleted Successfully"}
 
-def add_product_Image( product_i:ProductImage, session: Session):
+def add_product_Image( product_i:ProductImage, db: Session):
         # Step 1: Get the Product by ID
-        product = session.exec(select(Product).where(Product.id == product_i.product_id)).one_or_none()
+        product = db.exec(select(Product).where(Product.id == product_i.product_id)).one_or_none()
         if not product:
             raise HTTPException(status_code=404, detail="Product not found!!!")
         
@@ -206,35 +229,35 @@ def add_product_Image( product_i:ProductImage, session: Session):
         product.images.append(new_review)
         print("debugging product")
         # Step 4: Commit the changes
-        session.commit()
-        session.refresh(new_review)
+        db.commit()
+        db.refresh(new_review)
         
         return new_review
 
-def get_all_Image(product_id:int,session:Session):
-    v = session.exec(select(ProductImage).where(ProductImage.product_id == product_id)).all()
+def get_all_Image(product_id:int,db:Session):
+    v = db.exec(select(ProductImage).where(ProductImage.product_id == product_id)).all()
     return v
 
-def update_Image_by_id(image_id: int, to_update_image_data:ProductImage, session: Session):
+def update_Image_by_id(image_id: int, to_update_image_data:ProductImage, db: Session):
     # Step 1: Get the Image by ID
-    image = session.exec(select(ProductImage).where(ProductImage.id == image_id)).one_or_none()
+    image = db.exec(select(ProductImage).where(ProductImage.id == image_id)).one_or_none()
     if image is None:
         raise HTTPException(status_code=404, detail="Image not found")
     # Step 2: Update the Image
     hero_data = to_update_image_data.model_dump(exclude_unset=True)
     image.sqlmodel_update(hero_data)
-    session.add(image)
-    session.commit()
+    db.add(image)
+    db.commit()
     return image
 
-def delete_Image_by_id(image_id: int, session: Session):
+def delete_Image_by_id(image_id: int, db: Session):
     # Step 1: Get the Image by ID
-    image = session.exec(select(ProductImage).where(ProductImage.id == image_id)).one_or_none()
+    image = db.exec(select(ProductImage).where(ProductImage.id == image_id)).one_or_none()
     if image is None:
         raise HTTPException(status_code=404, detail="Image not found")
     # Step 2: Delete the Image
-    session.delete(image)
-    session.commit()
+    db.delete(image)
+    db.commit()
     return {"message": "Image Deleted Successfully"}
 
 

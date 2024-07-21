@@ -8,6 +8,11 @@ from app.core import db_eng
 from app import setting
 # from fastapi.openapi.docs import get_swagger_ui_html
 from app.api.v1.api import APIRouter
+from requests import get
+    
+
+
+
 
 def create_db_and_tables():
     print("Creating tables...")
@@ -42,6 +47,7 @@ app.include_router(APIRouter, prefix=setting.API_STRING)
 
 @app.get("/")
 def redirect_to_root():
+   
     return RedirectResponse(url="/docs")
 
 # @app.get("/docss", include_in_schema=False)

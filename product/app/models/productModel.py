@@ -80,6 +80,7 @@ class ProductCreate(SQLModel):
 # -----------------Product Response Models-----------------
 
 class ProductImageRead(SQLModel):
+    id: int
     product_option_id: int
     url: str    
 class ProductOptionRead(SQLModel):
@@ -89,7 +90,7 @@ class ProductOptionRead(SQLModel):
     price: float
     colour: str
     size: int
-   
+    id:int
     images: list[ProductImageRead]    
 
 class ProductRead(SQLModel):
@@ -97,6 +98,7 @@ class ProductRead(SQLModel):
     description: str
     brand: Optional[str] = None
     category: str
+    id : int
     options : list[ProductOptionRead]
 
 #------------------------------------------------------------------

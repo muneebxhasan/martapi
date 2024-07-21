@@ -1,14 +1,15 @@
 # main.py
 from contextlib import asynccontextmanager
 from aiokafka import AIOKafkaConsumer
-from app.consumer.product_consumer import consume_messages
+from app.consumer.order_consummer import update_stock_messages
+from app.consumer.product_consumer import add_stock_messages
 from fastapi import FastAPI
 from typing import AsyncGenerator
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.api import api_router as api_V1
 import asyncio
 from app.core import db_eng
-import json
+from app.settings import BOOTSTRAP_SERVER,KAFKA_ORDER_TOPIC,KAFKA_PRODUCT_TOPIC 
 from sqlmodel import SQLModel
 
 # The first part of the function, before the yield, will
@@ -17,8 +18,11 @@ from sqlmodel import SQLModel
 loop = asyncio.get_event_loop()
 @asynccontextmanager
 async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
-    print("Creating tables..")
-    asyncio.create_task(consume_messages('product_stock', 'broker:19092'))    
+    print("Starting app..")
+  
+    asyncio.create_task(add_stock_messages('add_stock', BOOTSTRAP_SERVER))   
+    asyncio.create_task(update_stock_messages('update_stock', BOOTSTRAP_SERVER))
+
 
     create_db_and_tables()
     yield
@@ -26,7 +30,7 @@ async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
 def create_db_and_tables()->None:
     SQLModel.metadata.create_all(db_eng.engine)
     
-app = FastAPI(lifespan=lifespan, title="Hello World API with DB", 
+app = FastAPI(lifespan=lifespan, title="Inventroy Service", 
     version="0.0.1",
     servers=[
         {
