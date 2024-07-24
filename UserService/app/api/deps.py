@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt , JWTError
 from app.model.user_model import TokenPayload, UserInfo, Userr
 
-reusable_oauth2 =  OAuth2PasswordBearer(tokenUrl=f"{setting.API_STRING}/login/token",scopes={"read": "Read access", "write": "Write access"})
+reusable_oauth2 =  OAuth2PasswordBearer(tokenUrl=f"{setting.API_STRING}/login/token")
 
 def get_session():
     with Session(db_eng.engine) as session:
@@ -18,11 +18,13 @@ def get_session():
 DB_session =  Annotated[Session,Depends(get_session)]       
 TOKEN_dep = Annotated[str, Depends(reusable_oauth2)]
 
-def get_current_user(db:DB_session,token: str = TOKEN_dep)->UserInfo|None:
+def get_current_user(db:DB_session,token: TOKEN_dep)->UserInfo|None:
     try:
+        # print("token",token)
         secret_key = str(setting.SECRET_KEY)
         payload = jwt.decode(token, secret_key, algorithms=[setting.ALGORITHM])
         token_data = TokenPayload(**payload)
+        # print("token_data",token_data)
     except (JWTError,ValidationError):
         raise HTTPException(status_code=403, detail="Invalid token")
     user = db.get(Userr, token_data.sub)

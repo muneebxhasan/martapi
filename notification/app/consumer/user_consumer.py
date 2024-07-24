@@ -1,10 +1,9 @@
 from aiokafka import AIOKafkaConsumer
-from app.send_notification import send_notification
+from app.send_notification import order_notifications
 from app import setting
 import json
 
-async def user_detail_messages(topic: str, BOOTSTRAP_SERVER: str,notification):
-    print("User Details..")
+async def user_detail_messages(topic: str, BOOTSTRAP_SERVER: str):
     consumer = AIOKafkaConsumer(
         topic,
         bootstrap_servers=BOOTSTRAP_SERVER,
@@ -16,9 +15,9 @@ async def user_detail_messages(topic: str, BOOTSTRAP_SERVER: str,notification):
     try:
         async for msg in consumer:
             # print(f"User Details: {msg.value.decode('utf-8')}")  # type: ignore
-            user = json.loads(msg.value.decode("utf-8")) # type: ignore
-            if user["user_id"] == notification["user_id"]:
-                await send_notification(setting.CILENT_ID, setting.CLIENT_SECRET,user,notification)
+            message = json.loads(msg.value.decode("utf-8")) # type: ignore
+            print(f"User Details: {message}")
+            await order_notifications(setting.CILENT_ID, setting.CLIENT_SECRET,message)
 
     finally:
         await consumer.stop()

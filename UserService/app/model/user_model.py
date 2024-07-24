@@ -21,12 +21,15 @@ class UserInfo(SQLModel):
     email: str
     full_name: str
     disabled: bool
+    is_superuser: bool
+    number: int
+    address: str
 
 class UserUpdate(SQLModel):
-    email: str | None 
-    full_name: str | None
-    number: int | None
-    address: str | None
+    email : Optional[str] = None
+    full_name: Optional[str] = None
+    number: Optional[int] = None
+    address: Optional[str] = None
 
 
     

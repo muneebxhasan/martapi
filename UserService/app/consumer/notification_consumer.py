@@ -14,19 +14,37 @@ async def user_detail(topic: str, BOOTSTRAP_SERVER: str):
     await producer.start()
     try:
         async for msg in consumer:
-            user = json.loads(msg.value.decode("utf-8"))  # type: ignore
-            user_id = int(user["user_id"])
+            notification = json.loads(msg.value.decode("utf-8"))  # type: ignore
+            user_id = notification.get("user_id")
+            
+            print("User ID:", user_id)
+            print("Notification:", notification)
 
-            with next(get_session()) as db:
+            with next(get_session()) as db:  
                 user:UserInfo = get_user_by_id(user_id, db)
-                user_ = {
-                    "user_id": user.id,
-                    "full_name": user.full_name,
-                    "email": user.email,
-                    "number": "03123456789"
-                }
-                user_ = json.dumps(user_).encode("utf-8")
-                await producer.send_and_wait("user_details", user_)
+                if user is not None:
+                    user_data = {
+                        "user_id": user.id,
+                        "full_name": user.full_name,
+                        "email": user.email,
+                        "number": user.number,
+                        "address": user.address,
+                    }
+
+                    # Add order confirmation notification
+                    order_notification = {
+                        "order_id": notification.get("order_id"),
+                        "user_id": user.id,
+                        "notification_id": "order_confirmation"
+                    }
+                
+                    message = {
+                    "user": user_data,
+                    "notification": order_notification
+                    }
+
+                message_json = json.dumps(message).encode("utf-8")
+                await producer.send_and_wait("order_notification", message_json)
 
 
     finally:

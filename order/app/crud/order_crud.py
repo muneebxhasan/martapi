@@ -31,7 +31,7 @@ async def add_order_details(order:Orderr,order_item:list[OrderItem],db:Session,p
 
 
         notification = json.dumps(notification).encode("utf-8")
-        await producer.send_and_wait("order_conformation",notification)
+        await producer.send_and_wait("order_conformation_notification",notification)
         return order
     # except Exception as e:
     #     raise e

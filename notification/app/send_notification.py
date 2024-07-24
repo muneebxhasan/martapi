@@ -1,26 +1,66 @@
 from notificationapi_python_server_sdk import notificationapi
 
 
-
-async def send_notification(clientId:str, clientSecret:str,user,notification):
+async def order_notifications(clientId:str, clientSecret:str,message:dict):
     print("Sending Notification..")
     notificationapi.init(
         clientId ,  # clientId
         clientSecret# clientSecret
     )
-
+    
     await notificationapi.send({
-        "notificationId": notification["notification_id"],
+        "notificationId": message["notification"]["notification_id"],
         "user": {
-          "id": user["email"],
-          "email": user["email"],
-          "number": user["number"] # Replace with your phone number
+          "id": message["user"]["email"],
+          "email": message["user"]["email"],
+          "number": "+15005550006" # Replace with your phone number
         },
         "mergeTags": {
-          "user": {
-                    "firstName": user["full_name"]
-          },
-          "order_id": notification["order_id"]
+          "full_name":message["user"]["full_name"],
+          "order_id": message["notification"]["order_id"],
+          "commentId": "testCommentId"
         }
     })
+    # print("Notification Sent")
+   
+
+async def user_notifications(clientId:str, clientSecret:str,message:dict):
+    print("Sending Notification..")
+    notificationapi.init(
+        clientId ,  # clientId
+        clientSecret# clientSecret
+    )
+    
+    if message["event"]=="user_registered":
+      await notificationapi.send({
+          "notificationId": "new_account",
+          "user": {
+            "id": message["email"],
+            "email": message["email"],
+            "number": "+15005550006" # Replace with your phone number
+          },
+          "mergeTags": {
+            "full_name": message["full_name"],
+            "comment": "Thanks for registering with us",
+            "commentId": "testCommentId"
+          }
+      })
+
+    if message["event"]=="user_updated" or message["event"]=="user_password_changed":
+      await notificationapi.send({
+        "notificationId": "account_update",
+        "user": {
+          "id": message["email"],
+            "email": message["email"],
+          "number": "+15005550006" # Replace with your phone number
+        },
+        "mergeTags": {
+          "full_name": message["full_name"],
+          "comment": "Your account has been updated",
+          "commentId": "testCommentId"
+        }
+    })
+      
+    print("Notification Sent")
+        
 

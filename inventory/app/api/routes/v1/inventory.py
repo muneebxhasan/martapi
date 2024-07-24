@@ -2,11 +2,12 @@ from fastapi import APIRouter , HTTPException
 from app.crud import inventory_crud
 from app.model.inventory_model import Inventory , InventoryUpdate , InventoryList
 from app.api.deps import DB_session
+from app.api.deps import GetCurrentUserDep
 
 router = APIRouter()
 
 @router.post("/add_inventoryItem", response_model=Inventory)
-def add_inventoryItem(inventory_data: Inventory,db:DB_session):
+def add_inventoryItem(inventory_data: Inventory,db:DB_session,current_user:GetCurrentUserDep):
     try:
         return inventory_crud.add_new_inventoryItem(inventory_data,db)
     except HTTPException as e:

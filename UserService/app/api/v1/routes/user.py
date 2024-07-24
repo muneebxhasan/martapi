@@ -46,6 +46,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
     """
+    print("current_user",current_user)
     return current_user
 
 
@@ -64,6 +65,10 @@ async def update_user_me(
                 status_code=409, detail="User with this email already exists"
             )
     user_data = user_in.model_dump(exclude_unset=True)
+    # for key, value in user_data.items():
+    #     setattr(current_user, key, value) 
+
+
     current_user.sqlmodel_update(user_data)
     db.add(current_user)
     db.commit()

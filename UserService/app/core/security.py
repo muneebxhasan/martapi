@@ -6,9 +6,7 @@ from jose import jwt
 pwd_context = CryptContext(schemes=["bcrypt"],deprecated="auto")
 
 def create_access_token(subject:dict,expires_delta:timedelta):
-    to_encode = subject.copy()
-    # to_encode = {"sub":str(subject),"exp": datetime.utcnow() + expires_delta}
-    to_encode.update({"exp":datetime.utcnow() + expires_delta})
+    to_encode = {"sub":str(subject),"exp": datetime.utcnow() + expires_delta}
     encoded_jwt = jwt.encode(to_encode,str(SECRET_KEY),algorithm=ALGORITHM)
     return encoded_jwt
 

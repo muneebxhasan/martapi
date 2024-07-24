@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.api import api_router as api_V1
 import asyncio
+from app.api.deps import LoginForAccessTokenDep
 from app.core import db_eng
 from app.settings import BOOTSTRAP_SERVER,KAFKA_ORDER_TOPIC,KAFKA_PRODUCT_TOPIC 
 from sqlmodel import SQLModel
@@ -60,11 +61,8 @@ def read_root():
 
     return {"App": "Service 2"}
 
-# # Kafka Producer as a dependency
-# async def get_kafka_producer():
-#     producer = AIOKafkaProducer(bootstrap_servers='broker:19092')
-#     await producer.start()
-#     try:
-#         yield producer
-#     finally:
-#         await producer.stop()
+
+@app.post("/auth/login", tags=["Wrapper Auth"])
+def login_for_access_token(form_data: LoginForAccessTokenDep):
+    return form_data
+

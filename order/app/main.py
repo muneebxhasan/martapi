@@ -6,10 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from app.core import db_eng
 from app import setting
-# from fastapi.openapi.docs import get_swagger_ui_html
 from app.api.v1.api import APIRouter
 from requests import get
-    
+from app.api.dep import LoginForAccessTokenDep    
 
 
 
@@ -61,4 +60,8 @@ def redirect_to_root():
 
 @app.get(f"{setting.API_STRING}/container", tags=["Health"])
 def read_root():
-    return {"Container": "Product services", "Port": "8003"}
+    return {"Container": "order services", "Port": "8003"}
+
+@app.post("/auth/login", tags=["Wrapper Auth"])
+def login_for_access_token(form_data: LoginForAccessTokenDep):
+    return form_data

@@ -11,26 +11,11 @@ import asyncio
 import json
 from app.api.v1 import api as api_v1
 from app.core import db_eng
+from app.api.dep import LoginForAccessTokenDep
 
 
 
 
-# only needed for psycopg 3 - replace postgresql
-# with postgresql+psycopg in settings.DATABASE_URL
-# connection_string = str(settings.DATABASE_URL).replace(
-#     "postgresql", "postgresql+psycopg"
-# )
-
-
-# recycle connections after 5 minutes
-# to correspond with the compute scale down
-# engine = create_engine(
-#     connection_string, connect_args={}, pool_recycle=300
-# )
-
-#engine = create_engine(
-#    connection_string, connect_args={"sslmode": "require"}, pool_recycle=300
-#)
 
 
 def create_db_and_tables()->None:
@@ -38,15 +23,10 @@ def create_db_and_tables()->None:
 
 
 
-# The first part of the function, before the yield, will
-# be executed before the application starts.
-# https://fastapi.tiangolo.com/advanced/events/#lifespan-function
-# loop = asyncio.get_event_loop()
 @asynccontextmanager
 async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
     print("Creating tables..")
-    # loop.run_until_complete(consume_messages('todos', 'broker:19092'))
-    # task = asyncio.create_task(consume_messages('todos', 'broker:19092'))
+   
     create_db_and_tables()
     yield
 
@@ -84,22 +64,7 @@ async def redirect_to_docs():
 def read_root():
     return {"Container": "Product services", "Port": "8000"}
 
-# Kafka Producer as a dependency
 
-# # @app.post("/todos/", response_model=Todo)
-# # async def create_todo(todo: Todo, session: Annotated[Session, Depends(get_session)], producer: Annotated[AIOKafkaProducer, Depends(get_kafka_producer)])->Todo:
-#         todo_dict = {field: getattr(todo, field) for field in todo.dict()}
-#         todo_json = json.dumps(todo_dict).encode("utf-8")
-#         print("todoJSON:", todo_json)
-#         # Produce message
-#         await producer.send_and_wait("todos", todo_json)
-#         # session.add(todo)
-#         # session.commit()
-#         # session.refresh(todo)
-#         return todo
-
-
-# @app.get("/todos/", response_model=list[Todo])
-# def read_todos(session: Annotated[Session, Depends(get_session)]):
-        # todos = session.exec(select(Todo)).all()
-        # return todos
+@app.post("/auth/login", tags=["Wrapper Auth"])
+def login_for_access_token(form_data: LoginForAccessTokenDep):
+    return form_data
