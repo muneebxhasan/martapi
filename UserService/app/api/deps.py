@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt , JWTError
 from app.model.user_model import TokenPayload, UserInfo, Userr
 
-reusable_oauth2 =  OAuth2PasswordBearer(tokenUrl=f"{setting.API_STRING}/login/token")
+reusable_oauth2 =  OAuth2PasswordBearer(tokenUrl=f"/user-service{setting.API_STRING}/login/token")
 
 def get_session():
     with Session(db_eng.engine) as session:

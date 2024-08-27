@@ -32,15 +32,16 @@ def create_db_and_tables()->None:
     SQLModel.metadata.create_all(db_eng.engine)
     
 app = FastAPI(lifespan=lifespan, title="Inventroy Service", 
+            root_path="/inventory-service",root_path_in_servers=True,
     version="0.0.1",
     servers=[
         {
-            "url": "http://127.0.0.1:8002", # ADD NGROK URL Here Before Creating GPT Action
+            "url": "http://127.0.0.1:8086", # ADD NGROK URL Here Before Creating GPT Action
             "description": "Development Server"
-        },{
-            "url": "http://127.0.0.1:8000", # ADD NGROK URL Here Before Creating GPT Action
-            "description": "Development Server"
-        }
+
+        }   
+
+        
         ])
 
 
@@ -52,6 +53,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+
 )
 app.include_router(api_V1, prefix="/v1/inventory_service")
 

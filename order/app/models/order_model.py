@@ -4,8 +4,8 @@ from typing import List, Optional
 from enum import Enum
 
 class OrderStatus(str, Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
+    PENDING = "unpaid"
+    PROCESSING = "paid"
     SHIPPED = "shipped"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
@@ -17,6 +17,7 @@ class Orderr(SQLModel, table=True):
     creation_date: datetime = Field(default_factory=datetime.now)
     expected_delivery_date: datetime
     items : list["OrderItem"] = Relationship(back_populates="order")
+    # cascade="all, delete-orphan"
 
 class OrderItem(SQLModel, table=True):
     id: int = Field(primary_key=True)

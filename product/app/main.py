@@ -32,10 +32,11 @@ async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan, title="product api", 
-    version="0.0.1",
+    version="0.0.1"
+    ,root_path="/product-service",root_path_in_servers=True,
     servers=[
         {
-            "url": "http://127.0.0.1:8000", # ADD NGROK URL Here Before Creating GPT Action
+            "url": "http://127.0.0.1:8085", # ADD NGROK URL Here Before Creating GPT Action
             "description": "Development Server"
         }
         ])
@@ -55,8 +56,11 @@ app.include_router(api_v1.api_router,prefix=settings.API_STRING)
 
 @app.get("/")
 async def redirect_to_docs():
-    
-    return RedirectResponse(url="/docs")
+    return {
+        "App": "Product Service",
+        "Port": "8085"
+    }
+    # return RedirectResponse(url="localhost:8085/docs")
 
 
 

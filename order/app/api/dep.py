@@ -20,27 +20,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def verfiy_current_user_dep(token:Annotated[str|None,Depends(oauth2_scheme)]):
-    print("inside the verify function")
     user = requests.get_current_user(token)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     # if user.get("disabled",True):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    print("user",user)
     return user
 
 
 GetCurrentUserDep = Annotated[dict, Depends(verfiy_current_user_dep)]
 
 def verify_current_admin_dep(token: Annotated[str | None, Depends(oauth2_scheme)]):
-    print("inside the verify function")
     user = requests.get_current_user(token) 
-    print("after the request function")
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.get("is_superuser", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    print("user",user)
     return user
 
 GetCurrentAdminDep = Depends(verify_current_admin_dep)

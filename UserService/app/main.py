@@ -24,8 +24,10 @@ async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
     # create_db_and_tables()
 
     yield
-app = FastAPI(lifespan=lifespan, title="User api",servers=[{
-                "url": "http://127.0.0.1:8004", # ADD NGROK URL Here Before Creating GPT Action
+app = FastAPI(lifespan=lifespan, title="User api",
+              root_path="/user-service",
+              root_path_in_servers=True,servers=[{
+                "url": "http://127.0.0.1:8088", # ADD NGROK URL Here Before Creating GPT Action
                 "description": "Development Server"
             }] )
 
@@ -39,4 +41,4 @@ app.add_middleware(
 app.include_router(app_router, prefix=setting.API_STRING)
 @app.get("/")
 def read_root():
-    return {"Hello  User service": "port 8004"}
+    return {"Hello  User service": "port 8088"}

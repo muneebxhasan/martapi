@@ -9,7 +9,8 @@ from app import setting
 from app.api.v1.api import APIRouter
 from requests import get
 from app.api.dep import LoginForAccessTokenDep    
-
+import asyncio
+from app.consumer.payment import get_payment_status_update_consumer
 
 
 
@@ -21,13 +22,13 @@ def create_db_and_tables():
 @asynccontextmanager
 async def lifespan(app: FastAPI)->AsyncGenerator[None, None]:
     print("Life Span...")
-
+    asyncio.create_task(get_payment_status_update_consumer("payment", "broker:19092"))
     create_db_and_tables()
     yield
 
-app = FastAPI(lifespan=lifespan, title="order api", version="0.0.1",
+app = FastAPI(lifespan=lifespan, title="order api", version="0.0.1",root_path="/order-service",root_path_in_servers=True,
             servers=[{
-                "url": "http://127.0.0.1:8003", # ADD NGROK URL Here Before Creating GPT Action
+                "url": "http://127.0.0.1:8087", # ADD NGROK URL Here Before Creating GPT Action
                 "description": "Development Server"
             }] 
             )

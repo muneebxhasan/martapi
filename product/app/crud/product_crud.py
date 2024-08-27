@@ -1,10 +1,9 @@
-from fastapi import HTTPException
+from fastapi import HTTPException,status
 from sqlmodel import Session, select
 from app.models.productModel import Product, ProductImageRead, ProductOptionRead, ProductRead, ProductUpdate, ProductRating ,ProductOption ,ProductImage ,ProductOptionCreate,ProductCreate
 from app.core.dp_kafka import Producer
-from app.producer.stock_producer import stock_producer
 import json
-# from app import stock_pb2
+from app import stock_pb2
 
 async def add_new_product(product_data: ProductCreate, db: Session,producer:Producer) :
     try:
@@ -30,35 +29,44 @@ async def add_new_product(product_data: ProductCreate, db: Session,producer:Prod
         db.commit()
         db.refresh(db_product)
         for idx, option_data in enumerate(product_data.options):
-            stock = {
-                "product_id": db_product.options[idx].product_id,
-                "option_id": db_product.options[idx].id,
-                "quantity": option_data.stock,
-            }
-            await stock_producer(stock, producer)
+            # stock = {
+            #     "product_id": db_product.options[idx].product_id,
+            #     "option_id": db_product.options[idx].id,
+            #     "quantity": option_data.stock,
+            # }
+            # stock = json.dumps(stock).encode("utf-8")
+
+            protobuf_stock = stock_pb2.Stock(product_id = db_product.options[idx].product_id, option_id = db_product.options[idx].id, quantity = option_data.stock)
+            serialized_stock = protobuf_stock.SerializeToString()
+            await producer.send_and_wait("add_stock",serialized_stock)
+        
         return db_product
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to add product to database") from e
+    
 
 def get_all_products(db: Session) -> list[ProductRead]:
-    products = db.exec(select(Product)).all()
-    
-    products = [ProductRead(
-        **product.model_dump(exclude={"options"}),
-        options=[
-            ProductOptionRead(
-                **option.model_dump(exclude={"images"}),
-                images=[
-                    ProductImageRead(
-                        **image.model_dump()
-                    ) for image in option.images
-                ]
-            ) for option in product.options
-        ]
-    ) for product in products]
-    print(products[0].options)
-    return products
+    try:
+        products = db.exec(select(Product)).all()
+        if products is None:
+            raise HTTPException(status_code=404, detail="Product not found")
+        products = [ProductRead(
+            **product.model_dump(exclude={"options"}),
+            options=[
+                ProductOptionRead(
+                    **option.model_dump(exclude={"images"}),
+                    images=[
+                        ProductImageRead(
+                            **image.model_dump()
+                        ) for image in option.images
+                    ]
+                ) for option in product.options
+            ]
+        ) for product in products]
+        return products
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to retrieve products from database") from e
 
 def get_product_by_id(product_id: int, db: Session) -> ProductRead:
     product = db.exec(
@@ -102,9 +110,25 @@ def delete_product_by_id(product_id: int, db: Session):
     product = db.exec(select(Product).where(Product.id == product_id)).one_or_none()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    # Step 2: Delete the Product
+
+    # Step 2: Delete related ProductOptions, ProductImages, and ProductRatings
+    # This will cascade the deletion if you haven't set cascade options in the relationships.
+    for option in product.options:
+        # Delete all related ProductImages
+        for image in option.images:
+            db.delete(image)
+        
+        # Delete all related ProductRatings
+        for rating in option.ratings:
+            db.delete(rating)
+        
+        # Delete the ProductOption itself
+        db.delete(option)
+
+    # Step 3: Delete the Product
     db.delete(product)
     db.commit()
+    
     return {"message": "Product Deleted Successfully"}
 
 async def add_product_option(productv: ProductOptionCreate ,db:Session,producer:Producer):
@@ -157,9 +181,19 @@ def delete_option_by_id(option_id: int, db: Session):
     option = db.exec(select(ProductOption).where(ProductOption.id == option_id)).one_or_none()
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
-    # Step 2: Delete the Option
+    
+    # Step 2: Delete related ProductImages and ProductRatings
+    # This will cascade the deletion if you haven't set cascade options in the relationships.
+    for image in option.images:
+        db.delete(image)
+    
+    for rating in option.ratings:
+        db.delete(rating)
+    
+    # Step 3: Delete the Option
     db.delete(option)
     db.commit()
+    
     return {"message": "Option Deleted Successfully"}
 
 def add_product_review( productrating:ProductRating, db: Session):
@@ -202,19 +236,27 @@ def delete_review_by_id(review_id: int, db: Session):
     review = db.exec(select(ProductRating).where(ProductRating.id == review_id)).one_or_none()
     if review is None:
         raise HTTPException(status_code=404, detail="Review not found")
+    
     # Step 2: Delete the Review
     db.delete(review)
     db.commit()
+    
     return {"message": "Review Deleted Successfully"}
 
-def delete_review_by_user(user_id:int,db:Session):
+def delete_review_by_user(user_id: int, db: Session):
+    # Step 1: Get all Reviews by User ID
     reviews = db.exec(select(ProductRating).where(ProductRating.user_id == user_id)).all()
     if not reviews:
         raise HTTPException(status_code=404, detail="User has no reviews")
+    
+    # Step 2: Bulk Delete all Reviews
     for review in reviews:
         db.delete(review)
+    
     db.commit()
+    
     return {"message": "All Reviews Deleted Successfully"}
+
 
 def add_product_Image( product_i:ProductImage, db: Session):
         # Step 1: Get the Product by ID
@@ -255,10 +297,13 @@ def delete_Image_by_id(image_id: int, db: Session):
     image = db.exec(select(ProductImage).where(ProductImage.id == image_id)).one_or_none()
     if image is None:
         raise HTTPException(status_code=404, detail="Image not found")
+    
     # Step 2: Delete the Image
     db.delete(image)
     db.commit()
+    
     return {"message": "Image Deleted Successfully"}
+
 
 
     

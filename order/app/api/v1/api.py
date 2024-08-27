@@ -9,7 +9,7 @@ APIRouter = APIRouter()
 APIRouter.include_router(order_router, prefix="/order",tags=["order"])
 
 
-APIRouter.include_router(order_admin_router, prefix="/order_admin", dependencies=[GetCurrentAdminDep],tags=["order_admin"])
+APIRouter.include_router(order_admin_router, prefix="/admin", dependencies=[GetCurrentAdminDep],tags=["order_admin"])
 
 
 

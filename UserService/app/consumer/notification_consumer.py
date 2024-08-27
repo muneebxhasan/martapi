@@ -16,7 +16,7 @@ async def user_detail(topic: str, BOOTSTRAP_SERVER: str):
         async for msg in consumer:
             notification = json.loads(msg.value.decode("utf-8"))  # type: ignore
             user_id = notification.get("user_id")
-            
+            user_id = int(user_id)
             print("User ID:", user_id)
             print("Notification:", notification)
 
@@ -35,14 +35,15 @@ async def user_detail(topic: str, BOOTSTRAP_SERVER: str):
                     order_notification = {
                         "order_id": notification.get("order_id"),
                         "user_id": user.id,
-                        "notification_id": "order_confirmation"
+                        "notification_id": notification.get("notification_id")
                     }
+                    # print("order_notification", order_notification)
                 
                     message = {
                     "user": user_data,
                     "notification": order_notification
                     }
-
+                    # print("Message", message)
                 message_json = json.dumps(message).encode("utf-8")
                 await producer.send_and_wait("order_notification", message_json)
 

@@ -1,4 +1,4 @@
-from fastapi import HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter,status
 from app.crud import product_crud # type: ignore
 from app.api.dep import DB_session 
 from app.models.productModel import Product, ProductRating,ProductUpdate ,ProductOption,ProductImage,ProductOptionCreate,ProductCreate
@@ -8,13 +8,13 @@ router = APIRouter()
 
 @router.post("/add",response_model=Product)
 async def add_new_product(product: ProductCreate,db:DB_session,producer:Producer):
-    # try:
+    try:
         productt = await product_crud.add_new_product(product,db,producer)
         return productt
     # except HTTPException as http_err:
     #     raise http_err
-    # except Exception as e:
-    #    return e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 
@@ -32,10 +32,10 @@ def delete_product_by_id(product_id: int, db:DB_session):
     try:
         product_crud.delete_product_by_id(product_id, db)
         return {"detail": "Product deleted"}
-    except HTTPException as http_err:
-        raise http_err
+    # except HTTPException as http_err:
+    #     raise http_err
     except Exception as e:
-       return e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/option/")
 async def add_product_option( product_v:ProductOptionCreate,db:DB_session,producer:Producer):

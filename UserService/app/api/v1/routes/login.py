@@ -35,7 +35,7 @@ def login_access_token(db:DB_session,
         expires_in=(setting.ACCESS_TOKEN_EXPIRE_MINUTES*60),
 
     )
-    print(token_data)
+    # print(token_data)
     return token_data
 
 
@@ -78,7 +78,7 @@ def tokens_manager_oauth_codeflow(
 
     access_token_expires = timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(minutes=setting.REFRESH_TOKEN_EXPIRE_MINUTES)
-    print("\n\n settings.ACCESS_TOKEN_EXPIRE_MINUTES \n\n ", setting.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # print("\n\n settings.ACCESS_TOKEN_EXPIRE_MINUTES \n\n ", setting.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     token_data = Token(
         access_token=security.create_access_token(
@@ -90,5 +90,5 @@ def tokens_manager_oauth_codeflow(
         expires_in=(setting.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     )
 
-    print("\n\n token_data \n\n ", token_data)
+    # print("\n\n token_data \n\n ", token_data)
     return token_data

@@ -7,9 +7,7 @@ router = APIRouter()
 
 @router.get("/all")
 def get_all_products(db: DB_session):
-    products=product_crud.get_all_products(db)
-    print(products)
-    return products
+    return product_crud.get_all_products(db)
 
 
 

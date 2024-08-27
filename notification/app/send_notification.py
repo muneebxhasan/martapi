@@ -7,7 +7,7 @@ async def order_notifications(clientId:str, clientSecret:str,message:dict):
         clientId ,  # clientId
         clientSecret# clientSecret
     )
-    
+    # print("callled-----------------------------------------------")
     await notificationapi.send({
         "notificationId": message["notification"]["notification_id"],
         "user": {

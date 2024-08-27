@@ -24,10 +24,10 @@ async def lifespan(app: FastAPI)-> AsyncGenerator[None, None]:
     asyncio.create_task(register_user_message("user_notify",BOOTSTRAP_SERVER))
     asyncio.create_task(order_conformation_notification_message('order_conformation_notification', BOOTSTRAP_SERVER))
     asyncio.create_task(user_detail_messages('order_notification', BOOTSTRAP_SERVER))
-
+    print("Starting application")
     yield
 
-app = FastAPI(lifespan=lifespan, title="notification api")
+app = FastAPI(lifespan=lifespan, title="notification api",root_path="/notification-service",root_path_in_servers=True)
 
 app.add_middleware(
     CORSMiddleware,

@@ -3,6 +3,7 @@ from sqlmodel import Session,select
 from app.models.order_model import Orderr,OrderItem,OrderStatus
 from app.core.dep_kafka import Producer
 import json
+from app import stock_pb2
 # from app.api.dep import UserDep
  # Get user details
 async def add_order_details(order:Orderr,order_item:list[OrderItem],db:Session,producer:Producer):
@@ -10,13 +11,16 @@ async def add_order_details(order:Orderr,order_item:list[OrderItem],db:Session,p
 
         for item in order_item:
             order.items.append(item)
-            update_stock = {
-                "product_id": item.product_id,
-                "option_id": item.option_id,
-                "quantity": item.quantity
-            }
-            update_stock = json.dumps(update_stock).encode("utf-8")
-            await producer.send_and_wait("update_stock",update_stock)
+            # update_stock = {
+            #     "product_id": item.product_id,
+            #     "option_id": item.option_id,
+            #     "quantity": item.quantity
+            # }
+            # update_stock = json.dumps(update_stock).encode("utf-8")
+            protobuf_stock = stock_pb2.Stock(product_id=item.product_id,option_id=item.option_id,quantity=item.quantity)
+            print("protobuf_stock",protobuf_stock)
+            serialized_stock =protobuf_stock.SerializeToString()
+            await producer.send_and_wait("update_stock",serialized_stock)
 
 
         db.add(order)
@@ -26,7 +30,7 @@ async def add_order_details(order:Orderr,order_item:list[OrderItem],db:Session,p
         notification = {
             "order_id": order.id,
             "user_id": order.user_id,
-            "notification_id": "order_conformation"
+            "notification_id": "order_confirmation"
         }
 
 
@@ -63,15 +67,27 @@ def get_all_orders_by_userid(user_id: int, db: Session) :
     # return all_items 
     # except Exception as e:
 
-def delete_order_by_userid(user_id:int,db:Session):
+def delete_order_by_userid(user_id: int, db: Session):
     try:
+        # Step 1: Get all Orders by User ID
         orders = db.exec(select(Orderr).where(Orderr.user_id == user_id)).all()
+        
+        if not orders:
+            raise HTTPException(status_code=404, detail="No orders found for this user")
+
+        # Step 2: Delete all associated OrderItems for each Order
         for order in orders:
+            for item in order.items:
+                db.delete(item)
             db.delete(order)
+        
+        # Step 3: Commit the transaction
         db.commit()
-        return {"message":"Orders deleted successfully"}
+        return {"message": "Orders deleted successfully"}
+    
     except Exception as e:
-        raise e
+        db.rollback()  # Rollback the transaction in case of any error
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
 def delete_order_by_orderid(order_id:int,db:Session):

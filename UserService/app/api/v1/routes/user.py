@@ -46,7 +46,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
     """
-    print("current_user",current_user)
+    # print("current_user",current_user)
     return current_user
 
 
