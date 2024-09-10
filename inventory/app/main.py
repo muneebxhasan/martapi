@@ -37,9 +37,11 @@ app = FastAPI(lifespan=lifespan, title="Inventroy Service",
     servers=[
         {
             "url": "http://127.0.0.1:8086", # ADD NGROK URL Here Before Creating GPT Action
+            
             "description": "Development Server"
 
         }   
+
 
         
         ])

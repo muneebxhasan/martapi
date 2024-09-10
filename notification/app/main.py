@@ -16,6 +16,7 @@ from app.send_notification import order_notifications
 
 
 def create_db_and_tables():
+    
     print("Creating tables...")
     SQLModel.metadata.create_all(db_eng.engine)
 
